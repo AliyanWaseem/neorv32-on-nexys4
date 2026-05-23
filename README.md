@@ -1,6 +1,6 @@
 # NEORV32 RISC-V on Nexys 4 — From Simulation to FPGA
 
-> A complete, beginner-friendly guide to simulating and deploying the **NEORV32 RISC-V soft-core processor** on the **Digilent Nexys 4 (Artix-7)** FPGA board — including running real C programs on hardware.
+> A complete, beginner-friendly guide to simulating and deploying the **NEORV32 RISC-V soft-core processor** on the **Digilent Nexys 4 no DDR (Artix-7)** FPGA board — including running real C programs on hardware.
 
 [![NEORV32](https://img.shields.io/badge/NEORV32-v1.12.x-blue)](https://github.com/stnolting/neorv32)
 [![FPGA](https://img.shields.io/badge/FPGA-Artix--7%20XC7A100T-orange)](https://digilent.com/reference/programmable-logic/nexys-4/start)
