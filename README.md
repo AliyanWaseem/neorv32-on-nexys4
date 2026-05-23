@@ -59,8 +59,6 @@ neorv32-nexys4/
 ├── guides/
 │   ├── 01_simulation_guide       ← complete simulation walkthrough
 │   └── 02_fpga_deployment_guide    ← complete FPGA implementation walkthrough
-├── docs/
-│   └── NEORV32_Simulation_Guide.docx  ← full reference document
 └── scripts/
     └── upload.py                    ← Python script to upload .bin via UART
 ```
