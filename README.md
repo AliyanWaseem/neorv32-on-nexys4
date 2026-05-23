@@ -52,13 +52,13 @@ By following this guide you will:
 ## Repository Structure
 
 ```
-neorv32-nexys4-guide/
+neorv32-nexys4/
 ├── README.md                        ← you are here
 ├── constraints/
 │   └── neorv32_nexys4.xdc           ← Vivado constraints for Nexys 4
 ├── guides/
-│   ├── 01_simulation_guide.md       ← complete simulation walkthrough
-│   └── 02_fpga_implementation.md    ← complete FPGA implementation walkthrough
+│   ├── 01_simulation_guide       ← complete simulation walkthrough
+│   └── 02_fpga_implementation    ← complete FPGA implementation walkthrough
 ├── docs/
 │   └── NEORV32_Simulation_Guide.docx  ← full reference document
 └── scripts/
