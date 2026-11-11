@@ -47,6 +47,9 @@ DEFAULT_LOG = os.path.join(HOME, "neorv32_uart_output.log")
 # or the native folder on Linux).
 LINUX_EXAMPLE_DIR = "~/projects/neorv32/sw/example"
 
+# Project folder of the Windows kit (no WSL needed), used first when it exists.
+KIT_EXAMPLE_DIR = r"C:\neorv32-kit\neorv32\sw\example"
+
 
 # -------------------------------------------------------------------
 # Settings and path helpers
@@ -198,11 +201,15 @@ class UploaderApp:
     # UI helpers
     # ---------------------------------------------------------------
     def _detect_wsl_dir(self):
+        if os.path.isdir(KIT_EXAMPLE_DIR):
+            self.wsl_dir = KIT_EXAMPLE_DIR
+            self._log(f"Kit build folder: {self.wsl_dir}")
+            return
         self.wsl_dir = find_wsl_example_dir()
         if self.wsl_dir:
             self._log(f"WSL build folder: {self.wsl_dir}")
         else:
-            self._log("WSL not found; Browse will start in your Windows home folder.")
+            self._log("No kit or WSL folder found; Browse will start in your home folder.")
 
     def _refresh_ports(self):
         self.port_map = {}
