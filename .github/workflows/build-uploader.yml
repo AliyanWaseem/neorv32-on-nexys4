@@ -1,0 +1,49 @@
+name: Build uploader
+
+on:
+  push:
+    paths:
+      - 'tools/fpga_uploader_gui.py'
+      - '.github/workflows/build-uploader.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: NEORV32-Uploader-windows
+            file: dist/NEORV32-Uploader.exe
+          # Built on an older Ubuntu so the binary also runs on newer distros (glibc).
+          - os: ubuntu-22.04
+            artifact: NEORV32-Uploader-linux
+            file: dist/NEORV32-Uploader-linux.tar.gz
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Tk (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3-tk tk-dev
+
+      - name: Install build tools
+        run: pip install pyinstaller pyserial
+
+      - name: Build
+        run: pyinstaller --onefile --windowed --name NEORV32-Uploader tools/fpga_uploader_gui.py
+
+      # A tar keeps the Linux file's execute permission, which a plain zip download loses.
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf dist/NEORV32-Uploader-linux.tar.gz -C dist NEORV32-Uploader
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.file }}
