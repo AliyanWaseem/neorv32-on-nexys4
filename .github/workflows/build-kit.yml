@@ -1,0 +1,82 @@
+name: Build Windows kit
+
+# Run by hand from the Actions tab, or push a tag like kit-v1 to also publish a release.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['kit-v*']
+
+permissions:
+  contents: write
+
+env:
+  NEORV32_TAG: v1.13.7
+  XPACK_VER: 14.2.0-3
+  W64DEVKIT_VER: 2.11.0
+  KIT: C:\neorv32-kit
+
+jobs:
+  kit:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble kit
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path $env:KIT | Out-Null
+          Set-Location $env:KIT
+
+          # RISC-V compiler
+          curl.exe -fL -o riscv.zip "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v$env:XPACK_VER/xpack-riscv-none-elf-gcc-$env:XPACK_VER-win32-x64.zip"
+          7z x riscv.zip -o"$env:KIT" | Out-Null
+          Rename-Item "xpack-riscv-none-elf-gcc-$env:XPACK_VER" riscv-gcc
+          Remove-Item riscv.zip
+
+          # make, shell tools and the PC compiler (for image_gen)
+          curl.exe -fL -o w64devkit.exe "https://github.com/skeeto/w64devkit/releases/download/v$env:W64DEVKIT_VER/w64devkit-x64-$env:W64DEVKIT_VER.7z.exe"
+          7z x w64devkit.exe -o"$env:KIT" | Out-Null
+          Remove-Item w64devkit.exe
+
+          # NEORV32 sources, pinned, with Linux line endings
+          git -c core.autocrlf=false clone --depth 1 --branch $env:NEORV32_TAG https://github.com/stnolting/neorv32.git
+          Remove-Item -Recurse -Force neorv32\.git
+
+          Copy-Item "$env:GITHUB_WORKSPACE\kit\build.bat" .
+          Copy-Item "$env:GITHUB_WORKSPACE\kit\README.txt" .
+          Get-ChildItem
+
+      - name: Check tools exist
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($f in @('riscv-gcc\bin\riscv-none-elf-gcc.exe','w64devkit\bin\make.exe','w64devkit\bin\gcc.exe','w64devkit\bin\sh.exe','build.bat')) {
+            if (-not (Test-Path (Join-Path $env:KIT $f))) { throw "Missing $f" }
+          }
+
+      # Build an example on a copy of the kit, so the published zip stays clean.
+      - name: Smoke test (build demo_blink_led)
+        shell: cmd
+        run: |
+          xcopy /e /i /q C:\neorv32-kit C:\kit-test >nul
+          call C:\kit-test\build.bat C:\kit-test\neorv32\sw\example\demo_blink_led
+          if errorlevel 1 exit /b 1
+          dir C:\kit-test\neorv32\sw\example\demo_blink_led\neorv32_exe.bin
+
+      - name: Zip kit
+        run: |
+          7z a -tzip "$env:GITHUB_WORKSPACE\NEORV32-Kit-win64-$env:NEORV32_TAG.zip" $env:KIT | Out-Null
+          Get-Item "$env:GITHUB_WORKSPACE\NEORV32-Kit-win64-$env:NEORV32_TAG.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NEORV32-Kit-win64-${{ env.NEORV32_TAG }}
+          path: NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip
+
+      - name: Publish release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/kit-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip
