@@ -13,7 +13,7 @@
 
 A practical guide that fills the gap between the official [NEORV32 documentation](https://stnolting.github.io/neorv32/) and actually getting a RISC-V processor running on a Nexys 4. It contains:
 
-- the **Vivado constraints** for the Nexys 4,
+- the **Vivado constraints** for the Nexys 4 (legacy no DDR),
 - a **Windows kit** (compiler + build tools + NEORV32, ready to unzip),
 - a **double-click uploader app** for Windows and Linux,
 - guides for the FPGA flow and for optional simulation.
@@ -26,7 +26,7 @@ Get everything from the **[latest release](https://github.com/AliyanWaseem/neorv
 
 | File | For | What it is |
 |------|-----|------------|
-| `NEORV32-Kit-win64-v1.13.7.zip` | Windows | RISC-V compiler, build tools, NEORV32 v1.13.7, `build.bat`, constraints |
+| `NEORV32-Kit-win64-v1.13.7.zip` | Windows | RISC-V compiler, build tools, GHDL simulator, NEORV32 v1.13.7, `build.bat`, `sim.bat`, constraints |
 | `NEORV32-Uploader.exe` | Windows | Upload `neorv32_exe.bin` to the board and watch its output |
 | `NEORV32-Uploader-linux.tar.gz` | Linux | The same uploader for Linux |
 
@@ -37,7 +37,7 @@ If you copied a file from someone else, check it is complete before using it:
 
 ## Requirements
 
-**Hardware:** Digilent **Nexys 4** board (original, no DDR) and a USB-A to micro-USB cable. A Nexys 4 DDR also works with different LED pins, see [Board variants](#board-variants).
+**Hardware:** Digilent **Nexys 4** board (original legacy, no DDR) and a USB-A to micro-USB cable. A Nexys 4 DDR also works with different LED pins, see [Board variants](#board-variants).
 
 **Software:** Vivado (WebPACK, free) with the Digilent cable drivers. On Windows that is all; the kit and the uploader bring everything else.
 
@@ -168,28 +168,28 @@ The bootloader is part of the bitstream, so you build the FPGA design **once** a
 
 ---
 
-## Optional: simulation
+## Simulation: run your program without a board
 
-Simulation is not needed for the FPGA flow, but it lets you test hardware changes without a board. See [`guides/01_simulation_guide.pdf`](guides/01_simulation_guide.pdf).
+No FPGA free? Run the same C program on a **simulated copy of the FPGA processor** (GHDL). The testbench [`sim/neorv32_nexys4_tb.vhd`](sim/neorv32_nexys4_tb.vhd) uses exactly the bitstream's configuration (RV32IMC, 16 kB IMEM, 8 kB DMEM, 8 LEDs, UART0) but starts your program directly instead of waiting for the bootloader.
 
-**GHDL (Path A):**
+**Windows kit:** double-click `sim.bat`, type a project name (e.g. `hello_world`), and choose how much simulated time to run.
+
+**Linux / WSL** (needs `ghdl` and the RISC-V toolchain):
 
 ```bash
-# In ~/projects/neorv32/sim/neorv32_tb.vhd set these generics to false for a much faster simulation:
-# DUAL_CORE_EN, ICACHE_EN, DCACHE_EN, TRACE_SIMLOG_EN
-
-cd ~/projects/neorv32/sw/example/hello_world
-make MARCH=rv32imc_zicsr_zifencei USER_FLAGS+=-DUART0_SIM_MODE clean_all install
-
-rm -rf ~/projects/neorv32/sim/build
-cd ~/projects/neorv32/sim
-sh ghdl.sh --stop-time=100ms
-cat tb.uart0_rx.log        # Hello world! :)
+bash scripts/sim.sh ~/projects/neorv32/sw/example/hello_world 1000ms
 ```
 
-`-DUART0_SIM_MODE` sends UART output to the simulator log. **Never use it for FPGA builds**, or you will see no output on the board.
+What you see:
 
-**Icarus Verilog (Path B):** uses [neorv32-verilog](https://github.com/stnolting/neorv32-verilog); see the simulation guide.
+- **UART output** (`printf`, `neorv32_uart0_puts`) prints straight into the window. The scripts compile with `-DUART0_SIM_MODE`, which makes the UART hand characters to the simulator instead of shifting bits out at 19200 baud.
+- **LEDs** print as `[LEDS] 00000101 (LD7..LD0)` lines, with the simulated time of each change.
+
+The simulated clock is **1 MHz** instead of 100 MHz. NEORV32 software reads the clock frequency from the hardware, so `delay_ms()` automatically counts 100x fewer cycles and LED demos finish in seconds instead of hours, while the reported times stay real milliseconds. Long-running programs are still slow: simulation computes every signal of every clock cycle.
+
+`-DUART0_SIM_MODE` only works in simulation. **Never use it for FPGA builds**, or you will see no output on the board (`build.bat` and the commands above for the board do not use it).
+
+For the official full testbench and the Verilog flow, see [`guides/01_simulation_guide.pdf`](guides/01_simulation_guide.pdf) and [neorv32-verilog](https://github.com/stnolting/neorv32-verilog).
 
 ---
 
@@ -206,9 +206,13 @@ neorv32-on-nexys4/
 │   └── 02_fpga_deployment_guide.pdf
 ├── kit/
 │   ├── build.bat                  Windows build script (goes into the kit)
+│   ├── sim.bat                    Windows simulation script (goes into the kit)
 │   └── README.txt                 Kit instructions
 ├── scripts/
-│   └── upload.py                  Command-line uploader
+│   ├── upload.py                  Command-line uploader
+│   └── sim.sh                     Simulate a program (Linux / WSL)
+├── sim/
+│   └── neorv32_nexys4_tb.vhd      Fast testbench matching the FPGA processor
 ├── tools/
 │   └── fpga_uploader_gui.py       Source of the uploader app
 └── .github/workflows/
@@ -221,7 +225,7 @@ neorv32-on-nexys4/
 Both are built by GitHub Actions, so you never need a Windows Python setup:
 
 - **Uploader:** runs automatically when `tools/fpga_uploader_gui.py` changes.
-- **Kit:** Actions → *Build Windows kit* → *Run workflow*. It downloads the pinned tools, compiles `demo_blink_led` on Windows as a test, and only then produces the zip.
+- **Kit:** Actions → *Build Windows kit* → *Run workflow*. It downloads the pinned tools, compiles `demo_blink_led` and simulates `hello_world` on Windows as tests, and only then produces the zip.
 
 Download the results from the run's **Artifacts** and attach them to a release.
 
