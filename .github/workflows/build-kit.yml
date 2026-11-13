@@ -51,8 +51,11 @@ jobs:
           git -c core.autocrlf=false clone --depth 1 --branch $env:NEORV32_TAG https://github.com/stnolting/neorv32.git
           Remove-Item -Recurse -Force neorv32\.git
 
-          Copy-Item "$env:GITHUB_WORKSPACE\kit\build.bat" .
-          Copy-Item "$env:GITHUB_WORKSPACE\kit\sim.bat" .
+          # Batch files get Windows (CRLF) line endings; cmd can mis-handle goto labels otherwise
+          foreach ($b in 'build.bat','sim.bat') {
+            $t = Get-Content "$env:GITHUB_WORKSPACE\kit\$b" -Raw
+            [IO.File]::WriteAllText("$env:KIT\$b", ($t -replace "`r?`n", "`r`n"))
+          }
           Copy-Item "$env:GITHUB_WORKSPACE\sim\neorv32_nexys4_tb.vhd" neorv32\sim\
           Copy-Item "$env:GITHUB_WORKSPACE\kit\README.txt" .
           Copy-Item "$env:GITHUB_WORKSPACE\constraints\neorv32_nexys4.xdc" .
