@@ -47,12 +47,13 @@ jobs:
 
           Copy-Item "$env:GITHUB_WORKSPACE\kit\build.bat" .
           Copy-Item "$env:GITHUB_WORKSPACE\kit\README.txt" .
+          Copy-Item "$env:GITHUB_WORKSPACE\constraints\neorv32_nexys4.xdc" .
           Get-ChildItem
 
       - name: Check tools exist
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($f in @('riscv-gcc\bin\riscv-none-elf-gcc.exe','w64devkit\bin\make.exe','w64devkit\bin\gcc.exe','w64devkit\bin\sh.exe','build.bat')) {
+          foreach ($f in @('riscv-gcc\bin\riscv-none-elf-gcc.exe','w64devkit\bin\make.exe','w64devkit\bin\gcc.exe','w64devkit\bin\sh.exe','build.bat','neorv32_nexys4.xdc')) {
             if (-not (Test-Path (Join-Path $env:KIT $f))) { throw "Missing $f" }
           }
 
