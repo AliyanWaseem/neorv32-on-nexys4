@@ -13,6 +13,7 @@ env:
   NEORV32_TAG: v1.13.7
   XPACK_VER: 14.2.0-3
   W64DEVKIT_VER: 2.11.0
+  GHDL_VER: 6.0.0
   KIT: C:\neorv32-kit
 
 jobs:
@@ -41,11 +42,18 @@ jobs:
           7z x w64devkit.exe -o"$env:KIT" | Out-Null
           Remove-Item w64devkit.exe
 
+          # GHDL VHDL simulator (portable, mcode backend)
+          curl.exe -fL -o ghdl.zip "https://github.com/ghdl/ghdl/releases/download/v$env:GHDL_VER/ghdl-mcode-$env:GHDL_VER-ucrt64.zip"
+          7z x ghdl.zip -o"$env:KIT\ghdl" | Out-Null
+          Remove-Item ghdl.zip
+
           # NEORV32 sources, pinned, with Linux line endings
           git -c core.autocrlf=false clone --depth 1 --branch $env:NEORV32_TAG https://github.com/stnolting/neorv32.git
           Remove-Item -Recurse -Force neorv32\.git
 
           Copy-Item "$env:GITHUB_WORKSPACE\kit\build.bat" .
+          Copy-Item "$env:GITHUB_WORKSPACE\kit\sim.bat" .
+          Copy-Item "$env:GITHUB_WORKSPACE\sim\neorv32_nexys4_tb.vhd" neorv32\sim\
           Copy-Item "$env:GITHUB_WORKSPACE\kit\README.txt" .
           Copy-Item "$env:GITHUB_WORKSPACE\constraints\neorv32_nexys4.xdc" .
           Get-ChildItem
@@ -53,7 +61,7 @@ jobs:
       - name: Check tools exist
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($f in @('riscv-gcc\bin\riscv-none-elf-gcc.exe','w64devkit\bin\make.exe','w64devkit\bin\gcc.exe','w64devkit\bin\sh.exe','build.bat','neorv32_nexys4.xdc')) {
+          foreach ($f in @('riscv-gcc\bin\riscv-none-elf-gcc.exe','w64devkit\bin\make.exe','w64devkit\bin\gcc.exe','w64devkit\bin\sh.exe','build.bat','sim.bat','neorv32_nexys4.xdc','ghdl\bin\ghdl.exe','neorv32\sim\neorv32_nexys4_tb.vhd')) {
             if (-not (Test-Path (Join-Path $env:KIT $f))) { throw "Missing $f" }
           }
 
@@ -65,6 +73,15 @@ jobs:
           call C:\kit-test\build.bat C:\kit-test\neorv32\sw\example\demo_blink_led
           if errorlevel 1 exit /b 1
           dir C:\kit-test\neorv32\sw\example\demo_blink_led\neorv32_exe.bin
+
+      # Simulate hello_world on the copy and check its UART output.
+      - name: Smoke test (simulate hello_world)
+        shell: cmd
+        run: |
+          set STOP=400ms
+          call C:\kit-test\sim.bat C:\kit-test\neorv32\sw\example\hello_world > sim_out.txt 2>&1
+          type sim_out.txt
+          findstr /C:"Hello world" sim_out.txt >nul || (echo Simulation output missing & exit /b 1)
 
       - name: Zip kit
         run: |
