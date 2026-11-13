@@ -19,9 +19,17 @@ No WSL, no Python, no internet, nothing to install.
 4. Upload: open NEORV32-Uploader.exe, press CPU RESET on the board,
    pick neorv32_exe.bin and click "Upload & Run".
 
+5. No board? Simulate instead: double-click sim.bat and type the project
+   name. Your program runs on a simulated copy of the FPGA processor.
+   UART output (printf etc.) prints in the window; LED changes print as
+   [LEDS] lines. The simulated clock is 1 MHz to keep it fast, but the
+   timestamps are real milliseconds. Short programs work best.
+
 Contents:
    riscv-gcc\    RISC-V compiler (xPack riscv-none-elf-gcc)
    w64devkit\    make, shell tools and the PC compiler used by the build
    neorv32\      NEORV32 sources (pinned version)
    build.bat     the build script
+   sim.bat       the simulation script (no board needed)
+   ghdl\         GHDL VHDL simulator
    neorv32_nexys4.xdc   Vivado constraints for the original Nexys 4
