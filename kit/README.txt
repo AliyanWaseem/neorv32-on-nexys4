@@ -24,3 +24,4 @@ Contents:
    w64devkit\    make, shell tools and the PC compiler used by the build
    neorv32\      NEORV32 sources (pinned version)
    build.bat     the build script
+   neorv32_nexys4.xdc   Vivado constraints for the original Nexys 4
