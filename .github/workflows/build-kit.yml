@@ -1,10 +1,11 @@
 name: Build Windows kit
 
-# Run by hand from the Actions tab, or push a tag like kit-v1 to also publish a release.
+# Run by hand from the Actions tab (zip appears under Artifacts), or publish a
+# GitHub release: the workflow then builds the kit and attaches it to that release.
 on:
   workflow_dispatch:
-  push:
-    tags: ['kit-v*']
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -91,13 +92,26 @@ jobs:
           7z a -tzip "$env:GITHUB_WORKSPACE\NEORV32-Kit-win64-$env:NEORV32_TAG.zip" $env:KIT | Out-Null
           Get-Item "$env:GITHUB_WORKSPACE\NEORV32-Kit-win64-$env:NEORV32_TAG.zip"
 
+      - name: SHA-256 checksum
+        run: |
+          $zip = "NEORV32-Kit-win64-$env:NEORV32_TAG.zip"
+          $hash = (Get-FileHash "$env:GITHUB_WORKSPACE\$zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $zip" | Out-File -Encoding ascii "$env:GITHUB_WORKSPACE\$zip.sha256"
+          Write-Host "SHA-256: $hash"
+          "### Kit SHA-256" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          "$hash  $zip" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+
       - uses: actions/upload-artifact@v4
         with:
           name: NEORV32-Kit-win64-${{ env.NEORV32_TAG }}
-          path: NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip
+          path: |
+            NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip
+            NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip.sha256
 
-      - name: Publish release (tag pushes only)
-        if: startsWith(github.ref, 'refs/tags/kit-v')
+      - name: Attach to release (release runs only)
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip
+          files: |
+            NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip
+            NEORV32-Kit-win64-${{ env.NEORV32_TAG }}.zip.sha256
