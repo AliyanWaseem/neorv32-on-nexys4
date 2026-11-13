@@ -20,7 +20,9 @@ if not "%KIT%"=="%KIT: =%" goto :kit_spaces
 rem ---- Use only the kit's tools, so other installed tools cannot interfere ----
 set "PATH=%KIT%\w64devkit\bin;%KIT%\riscv-gcc\bin;%SystemRoot%\system32;%SystemRoot%"
 set "EXAMPLES=%KIT%\neorv32\sw\example"
-if not defined MARCH set "MARCH=rv32imac_zicsr_zifencei"
+rem The bootloader test setup implements I, M, C, Zicsr and Zicntr (no A),
+rem so compile for exactly that. Override by setting MARCH before running.
+if not defined MARCH set "MARCH=rv32imc_zicsr_zifencei"
 
 rem ---- Which project? ----
 if not "%~1"=="" (
