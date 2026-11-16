@@ -39,16 +39,30 @@ if not exist "%PROJ%\makefile" if not exist "%PROJ%\Makefile" goto :no_makefile
 if not "%PROJ%"=="%PROJ: =%" goto :proj_spaces
 
 rem ---- How long to simulate? (simulated time, not real time) ----
-if defined STOP goto :have_stop
+if defined STOP goto :check_stop
 set "STOP=1000ms"
-if defined CI goto :have_stop
+if defined CI goto :check_stop
+:ask_stop
 echo.
-echo How much SIMULATED time to run? Examples: 300ms, 1000ms, 3000ms
-echo More time = longer wait. Press Ctrl+C any time to stop early.
+echo How much SIMULATED time to run? Examples: 300ms, 1000ms, 3sec
+echo A plain number means milliseconds. More time = longer wait.
+echo Press Ctrl+C any time to stop early.
 set "ANS="
 set /p "ANS=Simulated time [1000ms]: "
-if defined ANS set "STOP=%ANS%"
-:have_stop
+if defined ANS (set "STOP=%ANS%") else (set "STOP=1000ms")
+
+:check_stop
+rem GHDL needs <number><unit> with no space: remove spaces, a plain number
+rem becomes milliseconds, and "3s" becomes "3sec".
+set "STOP=%STOP: =%"
+echo %STOP%| findstr /r "^[0-9][0-9]*$" >nul && set "STOP=%STOP%ms"
+echo %STOP%| findstr /r /i "^[0-9][0-9]*s$" >nul && set "STOP=%STOP:~0,-1%sec"
+echo %STOP%| findstr /r /i /c:"^[0-9][0-9]*ms$" /c:"^[0-9][0-9]*us$" /c:"^[0-9][0-9]*ns$" /c:"^[0-9][0-9]*sec$" >nul
+if errorlevel 1 (
+  echo "%STOP%" is not a time. Type a number with a unit, for example 300ms or 2sec.
+  if defined CI goto :fail_end
+  goto :ask_stop
+)
 
 set "NHOME="
 set "REST=%PROJ:*\neorv32\sw\example\=%"
